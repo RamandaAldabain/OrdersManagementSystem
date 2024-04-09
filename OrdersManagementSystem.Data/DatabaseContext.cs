@@ -18,7 +18,7 @@ namespace OrdersManagementSystem.Data
 			//Seed Data
 			modelBuilder.RoleSeed();
 			modelBuilder.CategorySeed();
-
+			modelBuilder.ItemsSeed();
 
 			base.OnModelCreating(modelBuilder);
 

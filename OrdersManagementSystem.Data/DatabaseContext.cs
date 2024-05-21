@@ -1,6 +1,7 @@
 ﻿using Microsoft.AspNetCore.Identity.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore;
 using OrdersManagementSystem.Data.SeedData;
+using OrdersManagementSystem.Entities;
 using OrdersManagementSystem.Entities.Entities;
 using OrdersManagementSystem.Entities.Lookups;
 
@@ -20,11 +21,23 @@ namespace OrdersManagementSystem.Data
 			modelBuilder.CategorySeed();
 			modelBuilder.ItemsSeed();
 
-			base.OnModelCreating(modelBuilder);
-
+			base.OnModelCreating(modelBuilder);	
+		
 			modelBuilder.ApplyConfigurationsFromAssembly(typeof(DatabaseContext).Assembly);
 
-			modelBuilder.Entity<OrderItems>()
+            modelBuilder.Entity<Item>()
+            .Property(u => u.Description)
+            .HasConversion(
+             Description =>DataEncryptor.EncryptData<String>(Description),
+             encryptedDescription => DataEncryptor.DecryptData<String>(encryptedDescription));
+
+            modelBuilder.Entity<Item>()
+            .Property(u => u.Price)
+            .HasConversion(
+                Price => DataEncryptor.EncryptData<double>(Price),
+                encryptedPrice => DataEncryptor.DecryptData<double>(encryptedPrice)
+				);
+            modelBuilder.Entity<OrderItems>()
 			   .HasOne(oi => oi.Order)
 			   .WithMany(o => o.OrderItems)
 			   .HasForeignKey(oi => oi.OrderId);
@@ -37,8 +50,8 @@ namespace OrdersManagementSystem.Data
 			modelBuilder.Entity<Item>()
 			   .HasOne(oi => oi.Category);
 		}
-
-		public DbSet<User> Users { get; set; }
+       
+        public DbSet<User> Users { get; set; }
 		public DbSet<OrderItems> OrderItems { get; set; }
 		public DbSet<Order> Orders { get; set; }
 		public DbSet<Item> Items { get; set; }

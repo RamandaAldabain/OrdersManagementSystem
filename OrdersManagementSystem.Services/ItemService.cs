@@ -26,9 +26,8 @@ namespace OrdersManagementSystem.Services
 		public async Task<List<ItemDto>> GetItems()
 
 		{
-			var items = _DbContext.Items
-			.Where(x => !x.IsDeleted);
-			return _mapper.Map<List<ItemDto>>(items);
+			var items = _DbContext.Items.ToList().Where(x => !x.IsDeleted);
+            return _mapper.Map<List<ItemDto>>(items);
 		}
 
 		public async Task<ItemDto> CreateOrUpdateItem(ItemDto model)

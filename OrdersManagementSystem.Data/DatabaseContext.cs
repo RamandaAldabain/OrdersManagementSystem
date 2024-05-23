@@ -1,5 +1,7 @@
-﻿using Microsoft.AspNetCore.Identity.EntityFrameworkCore;
+﻿using Microsoft.AspNetCore.Identity;
+using Microsoft.AspNetCore.Identity.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.EntityFrameworkCore.Metadata;
 using OrdersManagementSystem.Data.SeedData;
 using OrdersManagementSystem.Entities;
 using OrdersManagementSystem.Entities.Entities;
@@ -13,44 +15,54 @@ namespace OrdersManagementSystem.Data
 		{
 		}
 
-	
-		protected override void OnModelCreating(ModelBuilder modelBuilder)
-		{
-			//Seed Data
-			modelBuilder.RoleSeed();
-			modelBuilder.CategorySeed();
-			modelBuilder.ItemsSeed();
+        protected override void OnModelCreating(ModelBuilder modelBuilder)
+        {
+            //Seed Data
+            modelBuilder.RoleSeed();
+            modelBuilder.CategorySeed();
+            modelBuilder.ItemsSeed();
 
-			base.OnModelCreating(modelBuilder);	
-		
-			modelBuilder.ApplyConfigurationsFromAssembly(typeof(DatabaseContext).Assembly);
+            base.OnModelCreating(modelBuilder);
 
-            modelBuilder.Entity<Item>()
-            .Property(u => u.Description)
-            .HasConversion(
-             Description =>DataEncryptor.EncryptData<String>(Description),
-             encryptedDescription => DataEncryptor.DecryptData<String>(encryptedDescription));
+            modelBuilder.ApplyConfigurationsFromAssembly(typeof(DatabaseContext).Assembly);
 
-            modelBuilder.Entity<Item>()
-            .Property(u => u.Price)
-            .HasConversion(
-                Price => DataEncryptor.EncryptData<double>(Price),
-                encryptedPrice => DataEncryptor.DecryptData<double>(encryptedPrice)
-				);
             modelBuilder.Entity<OrderItems>()
-			   .HasOne(oi => oi.Order)
-			   .WithMany(o => o.OrderItems)
-			   .HasForeignKey(oi => oi.OrderId);
+               .HasOne(oi => oi.Order)
+               .WithMany(o => o.OrderItems)
+               .HasForeignKey(oi => oi.OrderId);
 
-			modelBuilder.Entity<OrderItems>()
-				.HasOne(oi => oi.Item)
-				.WithMany(i => i.OrderItems)
-				.HasForeignKey(oi => oi.ItemId);
+            modelBuilder.Entity<OrderItems>()
+                .HasOne(oi => oi.Item)
+                .WithMany(i => i.OrderItems)
+                .HasForeignKey(oi => oi.ItemId);
 
-			modelBuilder.Entity<Item>()
-			   .HasOne(oi => oi.Category);
-		}
-       
+            modelBuilder.Entity<Item>()
+               .HasOne(oi => oi.Category);
+
+
+            foreach (IMutableEntityType entityType in modelBuilder.Model.GetEntityTypes())
+            {
+                var entityBuilder = modelBuilder.Entity(entityType.ClrType);
+                if (entityType.ClrType == typeof(IdentityRole) ||
+                       entityType.ClrType.Assembly == typeof(IdentityRoleClaim<>).Assembly)
+                {
+                    continue;
+                }
+                foreach (var property in entityType.GetProperties())
+                {
+                    if (property.Name.Contains("Id") || !DataEncryptor.IsSupportedType(property.ClrType))
+                    {
+                        continue;
+                    }
+                    var converter = DataEncryptor.GetConverter(property.ClrType);
+
+                    entityBuilder
+                        .Property(property.Name)
+                        .HasConversion(converter);
+                }
+            }
+        }
+      
         public DbSet<User> Users { get; set; }
 		public DbSet<OrderItems> OrderItems { get; set; }
 		public DbSet<Order> Orders { get; set; }
